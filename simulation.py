@@ -10,24 +10,29 @@ def sample_bins(x_min, x_max, values, n_boxes):
     bin_size = float(float(x_max - x_min) / float(n_boxes))
     last_bin = n_boxes - 1
     bins = np.zeros(n_boxes)
-    bin_x = np.zeros(n_boxes)
+    # indices = np.floor((values - x_min) / bin_size.astype(int)
     for value in values:
         index = np.floor((value - x_min) / bin_size).astype(int)
         if 0 <= index and index <= last_bin:
             bins[index] += 1
-            bin_x[index] = x_min + bin_size
-    return bins, bin_x
+    return bins
+
+def axis_x(x_min, x_max, n_boxes):
+    a = np.arange(n_boxes)
+    bin_size = float(x_max - x_min) / float(n_boxes)
+    return (x_min + (bin_size * a))
+
     # We take the decimal number of buckets from the start, and we round it down
     # to get the index.
 
     # if we have the range 0-12, and a bucket size of 4(three buckets:0,1,2), then 12 will fall
     # at bucket 3 index of bucket 2. To fix that, round just the maximal value back to the previous bucket.
 
-def count(matrix_buckets):
+def wave_function(matrix_bins):
     sum_of_square = 0
-    for item in matrix_buckets:
-         sum_of_square += (item ** 2)
-    psi_x = matrix_buckets / (np.sqrt(sum_of_square))# gives the parameters of the wave function.
+    for item in matrix_bins:
+        sum_of_square += item ** 2
+    psi_x = (matrix_bins).astype(float) / float(np.sqrt(sum_of_square))# gives the parameters of the wave function.
     # for receiving the probability we should take the square of the values in the matrix.
     return psi_x
 
@@ -59,7 +64,7 @@ def run_dmc(dt, n_times, n_0, x_min, x_max, n_boxes, sample_from_iteration):
     e_r = np.average(V_x)
     e_rs = [e_r]
     bins = np.zeros(n_boxes)
-
+    psi = 0
     for i in range(n_times):
         print i
         # creates a vector of number with step dt. i gives the items in the list
@@ -77,15 +82,21 @@ def run_dmc(dt, n_times, n_0, x_min, x_max, n_boxes, sample_from_iteration):
             raise Exception('x is too big, aborting!')
         if i > sample_from_iteration:
             bins += sample_bins(x_min, x_max, x, n_boxes)
-
+            psi = wave_function(bins)
+    bin_size = axis_x(x_min, x_max, n_boxes)
     avg_e_r = np.average(e_rs[sample_from_iteration:])
     standard_dev = np.std(e_rs[sample_from_iteration:])
 
-    plt.plot(bins)
-    # the histogram of the data
-    # n, bins, patches = plt.hist(x_0, n_boxes,y, normed=1, facecolor='green', alpha=0.75)
-    # plt.axis([x_min, x_max, 0, 1.0])
-    plt.grid(True)
+
+   # yerr = 0.2 * np.sqrt(x)
+   # xerr = yerr
+    # First illustrate basic pyplot interface, using defaults where possible.
+   # plt.figure()
+   # plt.errorbar(x, y, xerr, yerr )
+    # plt.title("DMC Harmonic oscillator")
+    x = np.array(bin_size)
+    y = np.array(psi)
+    plt.plot(x, y)
     plt.show()
 
     return standard_dev, avg_e_r
@@ -120,4 +131,4 @@ if __name__ == "__main__":
     dt = 0.1
     n_times = 2000
     sample_from_iteration = 50
-    print run_dmc(dt = dt, n_times = n_times, n_0 = n_0, x_min = x_min, x_max = x_max, n_boxes = n_boxes, sample_from_iteration=sample_from_iteration)
+    print run_dmc(dt, n_times, n_0, x_min, x_max, n_boxes, sample_from_iteration)
