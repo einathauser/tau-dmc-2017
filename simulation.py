@@ -2,39 +2,26 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import matplotlib.mlab as mlab
-# # function for counting particles in buckets:
 
-# we get a vector where the valueof x is the index of box it belongs to
-# These are the values of the particles in the matrix. to use the function i should write:
-# bucketing(item) for item in x_0.(values=x_0)
-def bucketing(x_min, x_max, values, n_boxes):
-    bucket_size = float(float(x_max - x_min) / float(n_boxes))
-    last_bucket = n_boxes - 1
-    matrix_buckets = np.zeros(n_boxes)  # [0] * n_boxes
+MAX_X_SIZE = 1e6
+
+# function for counting particles in bins:
+def sample_bins(x_min, x_max, values, n_boxes):
+    bin_size = float(float(x_max - x_min) / float(n_boxes))
+    last_bin = n_boxes - 1
+    bins = np.zeros(n_boxes)
+    bin_x = np.zeros(n_boxes)
     for value in values:
-        index = int((value - x_min) / bucket_size)
-        if index > last_bucket:
-           index = last_bucket
-        matrix_buckets[index] += 1
-    return matrix_buckets
+        index = np.floor((value - x_min) / bin_size).astype(int)
+        if 0 <= index and index <= last_bin:
+            bins[index] += 1
+            bin_x[index] = x_min + bin_size
+    return bins, bin_x
     # We take the decimal number of buckets from the start, and we round it down
-    # to get the bucket index (Starting from 0)
+    # to get the index.
 
     # if we have the range 0-12, and a bucket size of 4(three buckets:0,1,2), then 12 will fall
     # at bucket 3 index of bucket 2. To fix that, round just the maximal value back to the previous bucket.
-def matrix_location(x_min, x_max, n_boxes, values):
-    bucket_size = float(float(x_max - x_min) / float(n_boxes))
-    last_bucket = n_boxes - 1
-    indices = []
-    for value in values:
-        index = int((value - x_min) / bucket_size)
-        if index > last_bucket:
-           index = last_bucket
-        else:
-            index = index
-        indices.append(index)
-    return indices
-
 
 def count(matrix_buckets):
     sum_of_square = 0
@@ -66,12 +53,13 @@ def energy(v_x, n_pre, n_0, dt):
     # if (previous * 100 / avg_e_r) <= 5:
     # time_interval.append(time)
 
-def run_dmc(dt, n_times, n_0, x_min, x_max, n_boxes):
+def run_dmc(dt, n_times, n_0, x_min, x_max, n_boxes, sample_from_iteration):
     x = np.zeros(n_0, dtype=np.float)
     V_x = V(x)
     e_r = np.average(V_x)
     e_rs = [e_r]
-    new_psy = 0
+    bins = np.zeros(n_boxes)
+
     for i in range(n_times):
         print i
         # creates a vector of number with step dt. i gives the items in the list
@@ -83,25 +71,20 @@ def run_dmc(dt, n_times, n_0, x_min, x_max, n_boxes):
         n_previous = len(x)
         # print('Round %d m_x: %s' % (i, np.mean(m_x)))
         e_r = energy(V_x, n_previous, n_0, dt)
-        previous_avg = np.average(e_rs)
+        # previous_avg = np.average(e_rs)
         e_rs.append(e_r)
-        psy_s = []
-        buckets = []
-        if len(x) > 30 * 1000 * 1000:
-            raise Exception('Basa')
-        if i >= 50 & i < n_times:
-            avg_e_r = np.average(e_rs[49:])
-            standard_dev = np.std(e_rs[49:])
-            num_buckets = bucketing(x_min, x_max, x, n_boxes)
-            buckets += matrix_location(x_min, x_max, x, n_boxes)
-            psy = new_psy
-            new_psy = count(num_buckets)
-    mu, sigma = ((x_max + x_min)/2), 5)
-    x_0 = mu + sigma * np.random.randn(n_boxes)
+        if len(x) > MAX_X_SIZE:
+            raise Exception('x is too big, aborting!')
+        if i > sample_from_iteration:
+            bins += sample_bins(x_min, x_max, x, n_boxes)
 
+    avg_e_r = np.average(e_rs[sample_from_iteration:])
+    standard_dev = np.std(e_rs[sample_from_iteration:])
+
+    plt.plot(bins)
     # the histogram of the data
-    n, bins, patches = plt.hist(x_0, n_boxes, normed=1, facecolor='green', alpha=0.75)
-    plt.axis([x_min, x_max, 0, 1.0])
+    # n, bins, patches = plt.hist(x_0, n_boxes,y, normed=1, facecolor='green', alpha=0.75)
+    # plt.axis([x_min, x_max, 0, 1.0])
     plt.grid(True)
     plt.show()
 
@@ -128,13 +111,13 @@ def run_dmc(dt, n_times, n_0, x_min, x_max, n_boxes):
 
 
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
     # execute only if run as a script
-    # count(np.random.uniform(0, 1999, 10000), 2000)
     n_0 = 500
-    x_min = -2.0
-    x_max = 2.0
+    x_min = -5.0
+    x_max = 5.0
     n_boxes = 200
     dt = 0.1
     n_times = 2000
-print run_dmc(dt = 0.1, n_times = 2000, n_0 = 500, x_min = -2.0, x_max = 2.0, n_boxes = 200)
+    sample_from_iteration = 50
+    print run_dmc(dt = dt, n_times = n_times, n_0 = n_0, x_min = x_min, x_max = x_max, n_boxes = n_boxes, sample_from_iteration=sample_from_iteration)
