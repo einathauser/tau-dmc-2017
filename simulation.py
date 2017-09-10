@@ -6,33 +6,26 @@ import matplotlib.mlab as mlab
 MAX_X_SIZE = 1e6
 
 # function for counting particles in bins:
+# We take the decimal number of buckets from the start, and we round it down to get the index.
+
+# if we have the range 0-12, and a bucket size of 4(three buckets:0,1,2), then 12 will fall
+# at bucket 3 index of bucket 2. To fix that, round just the maximal value back to the previous bucket.
 def sample_bins(x_min, x_max, values, n_boxes):
-    bin_size = float(float(x_max - x_min) / float(n_boxes))
-    last_bin = n_boxes - 1
-    bins = np.zeros(n_boxes)
-    # indices = np.floor((values - x_min) / bin_size.astype(int)
-    for value in values:
-        index = np.floor((value - x_min) / bin_size).astype(int)
-        if 0 <= index and index <= last_bin:
-            bins[index] += 1
+    bins, _ = np.histogram(values, bins=np.linspace(x_min, x_max, n_boxes + 1))
     return bins
 
 def axis_x(x_min, x_max, n_boxes):
     a = np.arange(n_boxes)
     bin_size = float(x_max - x_min) / float(n_boxes)
-    return (x_min + (bin_size * a))
+    return (x_min + (bin_size * (a + 0.5)))
 
-    # We take the decimal number of buckets from the start, and we round it down
-    # to get the index.
-
-    # if we have the range 0-12, and a bucket size of 4(three buckets:0,1,2), then 12 will fall
-    # at bucket 3 index of bucket 2. To fix that, round just the maximal value back to the previous bucket.
 
 def wave_function(matrix_bins):
     sum_of_square = 0
+    bin_size = float(x_max - x_min) / float(n_boxes)
     for item in matrix_bins:
         sum_of_square += item ** 2
-    psi_x = (matrix_bins).astype(float) / float(np.sqrt(sum_of_square))# gives the parameters of the wave function.
+    psi_x = (matrix_bins).astype(float) / float(np.sqrt(bin_size*(sum_of_square)))# gives the parameters of the wave function.
     # for receiving the probability we should take the square of the values in the matrix.
     return psi_x
 
@@ -53,8 +46,6 @@ def particle_locations(x, dt):
 
 def energy(v_x, n_pre, n_0, dt):
     return np.average(v_x) + (1.0 - float(n_pre) / n_0) / dt
-    # sum_e_r += e_r
-    # avg_e_r = sum_e_r / time_interval
     # if (previous * 100 / avg_e_r) <= 5:
     # time_interval.append(time)
 
@@ -88,15 +79,18 @@ def run_dmc(dt, n_times, n_0, x_min, x_max, n_boxes, sample_from_iteration):
     standard_dev = np.std(e_rs[sample_from_iteration:])
 
 
-   # yerr = 0.2 * np.sqrt(x)
-   # xerr = yerr
-    # First illustrate basic pyplot interface, using defaults where possible.
-   # plt.figure()
-   # plt.errorbar(x, y, xerr, yerr )
-    # plt.title("DMC Harmonic oscillator")
+
     x = np.array(bin_size)
     y = np.array(psi)
-    plt.plot(x, y)
+    # yerr
+    # xerr
+    # First illustrate basic pyplot interface, using defaults where possible.
+    # plt.figure()
+    # plt.errorbar(x, y, xerr, yerr)
+    plt.title("DMC Harmonic oscillator")
+    z = (np.pi**(-0.25))*(np.exp(-(x**2)/2))
+    plt.plot(x, y, color = 'green')
+    plt.plot(x, z, color = 'blue')
     plt.show()
 
     return standard_dev, avg_e_r
@@ -111,22 +105,16 @@ def run_dmc(dt, n_times, n_0, x_min, x_max, n_boxes, sample_from_iteration):
 
     # # initial values: N_1=500, E_r=0.5, N_max=2000
 # time_interval = []
-# # initializing the matrix(==delta function) in zero
-# for time in np.arange(0.0, t_0, dt,
-#                       dtype=float):
-
 #     if (previous * 100 / avg_e_r) <= 5:
 #         time_interval.append(time)
-#     else:
-#         previous = avg_e_r
 
 
 
 if __name__ == "__main__":
     # execute only if run as a script
     n_0 = 500
-    x_min = -5.0
-    x_max = 5.0
+    x_min = -20.0
+    x_max = 20.0
     n_boxes = 200
     dt = 0.1
     n_times = 2000
