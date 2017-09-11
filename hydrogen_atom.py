@@ -5,23 +5,26 @@ import matplotlib.mlab as mlab
 
 MAX_X_SIZE = 1e6
 
-def sample_bins(x_min, x_max, x, n_boxes):
-    distance = np.array(np.sqrt(x[:, 0]**2 + x[:, 1]**2 + x[:, 2]**2)).astype(float)
-    bins, _ = np.histogram(distance, bins=np.linspace(x_min, x_max, n_boxes + 1))
+def sample_bins(x_max, x, n_boxes):
+    r_max = np.sqrt(float(3*x_max**2))
+    radius = np.array(np.sqrt(x[:, 0]**2 + x[:, 1]**2 + x[:, 2]**2)).astype(float)
+    bins, _ = np.histogram(radius, bins=np.linspace(0.0, r_max, n_boxes + 1))
     return bins
 
-def axis_x(x_min, x_max, n_boxes):
+def bin_size(x_max, n_boxes):
     a = np.arange(n_boxes)
-    bin_size = float(x_max - x_min) / float(n_boxes)
-    return (x_min + (bin_size * (a + 0.5)))
+    # bin_size = (0+(4*np.pi*(float(np.sqrt(3*(x_max**2)))**3) / (3*n_boxes**3)))*(a + 0.5)
+    bin_size = (np.sqrt(3*x_max**2).astype(float)/n_boxes)*(a + 0.5)
+    return bin_size
 
-
-def wave_function(matrix_bins):
+def wave_function(matrix_bins, x_max, n_boxes, bin_size):
     sum_of_square = 0
-    for item in matrix_bins:
-        sum_of_square += item ** 2
-    psi_x = (matrix_bins).astype(float) / float(np.sqrt(sum_of_square))# gives the parameters of the wave function.
-    # for receiving the probability we should take the square of the values in the matrix.
+    delta_r = np.sqrt(3*x_max**2).astype(float)/n_boxes
+    new_matrix = (matrix_bins**2)*(bin_size**2)
+    # bin_size = 0 + 4 * np.pi * ((float(np.sqrt(3 * (x_max ** 2))) ** 3) / (3 * n_boxes**3))
+    for item in new_matrix:
+        sum_of_square += item
+    psi_x = matrix_bins.astype(float) / float(np.sqrt(4*(np.pi)*delta_r*(sum_of_square)))
     return psi_x
 
 def m(W_x):
@@ -29,7 +32,7 @@ def m(W_x):
 
 def V(e, x):
     distance = np.array(np.sqrt(x[:, 0]**2 + x[:, 1]**2 + x[:, 2]**2)).astype(float)
-    return ((-e**2) / distance) # returns the third column, with is r.
+    return ((-e**2) / distance)
 
 def W(V_x, e_r, dt):
     return np.exp(-(V_x - e_r) * dt)
@@ -52,6 +55,7 @@ def run_dmc(dt, n_times, n_0, x_min, x_max, n_boxes, sample_from_iteration, e):
     e_rs = [e_r]
     bins = np.zeros(n_boxes)
     psi = 0
+    bins_size = bin_size(x_max, n_boxes)
     for i in range(n_times):
         # creates a vector of number with step dt. i gives the items in the list
         x = particle_locations(x, dt)
@@ -68,22 +72,19 @@ def run_dmc(dt, n_times, n_0, x_min, x_max, n_boxes, sample_from_iteration, e):
         if len(x) > MAX_X_SIZE:
             raise Exception('x is too big, aborting!')
         if i > sample_from_iteration:
-            bins += sample_bins(x_min, x_max, x, n_boxes)
-            psi = wave_function(bins)
-    bin_size = axis_x(x_min, x_max, n_boxes)
+            bins += sample_bins(x_max, x, n_boxes)
+            psi = wave_function(bins, x_max, n_boxes, bins_size)
     avg_e_r = np.average(e_rs[sample_from_iteration:])
     standard_dev = np.std(e_rs[sample_from_iteration:])
 
-
-
-    x = np.array(bin_size)
+    x = np.array(bins_size)
     y = np.array(psi)
     plt.title("DMC Hydrogen atom")
-   # z = 2*np.exp(-x)
+    #z = 2*np.exp(-x)
     r = x * np.array(psi)
     plt.plot(x, y, color = 'green')
     # plt.plot(e_rs)
-    # plt.plot(x, z, color = 'blue')
+    #plt.plot(x, z, color = 'blue')
     plt.plot(x, r, color = 'red')
     plt.show()
 
@@ -93,7 +94,9 @@ if __name__ == "__main__":
     # execute only if run as a script
     n_0 = 5000
     x_min = 0.0
-    x_max = 5.0
+    x_max = 10.0
+    # x_max=y_max=z_max. these are the values which indicate location that you can enter the matrix
+    # the values can be different but their range can't because it's a sphere.
     n_boxes = 2000
     dt = 0.1
     n_times = 2000
