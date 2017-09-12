@@ -11,20 +11,13 @@ def sample_bins(x_max, x, n_boxes):
     bins, _ = np.histogram(radius, bins=np.linspace(0.0, r_max, n_boxes + 1))
     return bins
 
-def bin_size(x_max, n_boxes):
-    a = np.arange(n_boxes)
-    # bin_size = (0+(4*np.pi*(float(np.sqrt(3*(x_max**2)))**3) / (3*n_boxes**3)))*(a + 0.5)
-    bin_size = (np.sqrt(3*x_max**2).astype(float)/n_boxes)*(a + 0.5)
-    return bin_size
-
-def wave_function(matrix_bins, x_max, n_boxes, bin_size):
+def wave_function(density, x_max, n_boxes, bin_size):
     sum_of_square = 0
     delta_r = np.sqrt(3*x_max**2).astype(float)/n_boxes
-    new_matrix = (matrix_bins**2)*(bin_size**2)
-    # bin_size = 0 + 4 * np.pi * ((float(np.sqrt(3 * (x_max ** 2))) ** 3) / (3 * n_boxes**3))
+    new_matrix = (density**2)
     for item in new_matrix:
         sum_of_square += item
-    psi_x = matrix_bins.astype(float) / float(np.sqrt(4*(np.pi)*delta_r*(sum_of_square)))
+    psi_x = density.astype(float) / ((bin_size)*float(np.sqrt(delta_r*(sum_of_square))))
     return psi_x
 
 def m(W_x):
@@ -55,7 +48,9 @@ def run_dmc(dt, n_times, n_0, x_min, x_max, n_boxes, sample_from_iteration, e):
     e_rs = [e_r]
     bins = np.zeros(n_boxes)
     psi = 0
-    bins_size = bin_size(x_max, n_boxes)
+    a = np.arange(n_boxes)
+    bin_size = (np.sqrt(3*x_max**2).astype(float)/n_boxes)*(a + 0.5)
+    matrix_of_volumes = (0+(4*np.pi*(float(np.sqrt(3*(x_max**2)))**3) / (3*n_boxes**3)))*(a + 0.5)
     for i in range(n_times):
         # creates a vector of number with step dt. i gives the items in the list
         x = particle_locations(x, dt)
@@ -73,19 +68,22 @@ def run_dmc(dt, n_times, n_0, x_min, x_max, n_boxes, sample_from_iteration, e):
             raise Exception('x is too big, aborting!')
         if i > sample_from_iteration:
             bins += sample_bins(x_max, x, n_boxes)
-            psi = wave_function(bins, x_max, n_boxes, bins_size)
+            density = bins/matrix_of_volumes
+            psi = wave_function(density, x_max, n_boxes, bin_size)
     avg_e_r = np.average(e_rs[sample_from_iteration:])
     standard_dev = np.std(e_rs[sample_from_iteration:])
 
-    x = np.array(bins_size)
-    y = np.array(psi)
+    r_psi = psi*bin_size
+    plt.xlim(0.0, 7.5)
+    plt.ylim(0.0, 2.2)
     plt.title("DMC Hydrogen atom")
-    #z = 2*np.exp(-x)
-    r = x * np.array(psi)
-    plt.plot(x, y, color = 'green')
+    psi_analytic = 2*np.exp(-bin_size)
+    r_psi_analytic = bin_size*psi_analytic
+    plt.plot(bin_size, r_psi, color = 'green')
     # plt.plot(e_rs)
-    #plt.plot(x, z, color = 'blue')
-    plt.plot(x, r, color = 'red')
+    plt.plot(bin_size, psi_analytic, color = 'blue')
+    plt.plot(bin_size, psi, color = 'red')
+    plt.plot(bin_size, r_psi_analytic, color='yellow')
     plt.show()
 
     return standard_dev, avg_e_r
