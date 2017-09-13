@@ -7,10 +7,13 @@ import matplotlib.mlab as mlab
 MAX_X_SIZE = 1e6
 
 def sample_bins(x_min, x_max, x, n_boxes):
+    bins = np.zeros((n_boxes, 3))
     bins_x, _ = np.histogram(x[:, 0], bins=np.linspace(x_min, x_max, n_boxes + 1))
     bins_y, _ = np.histogram(x[:, 1], bins=np.linspace(x_min, x_max, n_boxes + 1))
     bins_z, _ = np.histogram(x[:, 2], bins=np.linspace(x_min, x_max, n_boxes + 1))
-    bins = [bins_x, bins_y, bins_z]
+    bins[:, 0] = bins_x
+    bins[:, 1] = bins_y
+    bins[:, 2] = bins_z
     return bins
 
 def center_of_bins(x_min, x_max, n_boxes):
@@ -25,7 +28,7 @@ def wave_function(matrix_bins, x_min, x_max, n_boxes):
     for item in matrix_bins:
         sum_of_square += item**2
         # we receive separate number for each axis.
-    psi_x = (matrix_bins).astype(float) / float(np.sqrt(bin_size*(sum_of_square)))
+    psi_x = (matrix_bins).astype(float) / (np.sqrt((bin_size**3)*(sum_of_square)).astype(float))
     return psi_x
 
 def m(W_x):
@@ -61,8 +64,8 @@ def run_dmc(dt, n_times, n_0, x_min, x_max, n_boxes, sample_from_iteration, e, r
     V_x = V(e, x, r)
     e_r = np.average(V_x)
     e_rs = [e_r]
-    # bins = np.zeros(n_boxes)
-    # psi = 0
+    #bins = np.zeros((n_boxes, 3))
+    #psi = 0
     for i in range(n_times):
         x = particle_locations(x, dt)
         V_x = V(e, x, r)
@@ -78,10 +81,10 @@ def run_dmc(dt, n_times, n_0, x_min, x_max, n_boxes, sample_from_iteration, e, r
         e_rs.append(e_r)
         if len(x) > MAX_X_SIZE:
             raise Exception('x is too big, aborting!')
-     #   if i > sample_from_iteration:
-           # bins += sample_bins(x_min, x_max, x, n_boxes)
-           # psi = wave_function(bins)
-   # bin_size = center_of_bins(x_min, x_max, n_boxes)
+    #    if i > sample_from_iteration:
+    #        bins += sample_bins(x_min, x_max, x, n_boxes)
+    #        psi = wave_function(bins, x_min, x_max, n_boxes)
+    #bin_size = center_of_bins(x_min, x_max, n_boxes)
     avg_e_r = np.average(e_rs[sample_from_iteration:])
     standard_dev = np.std(e_rs[sample_from_iteration:])
 
@@ -90,7 +93,10 @@ def run_dmc(dt, n_times, n_0, x_min, x_max, n_boxes, sample_from_iteration, e, r
     x = electron_points[:, 0]
     y = electron_points[:, 1]
     z = electron_points[:, 2]
-    ax.scatter(x, y, z, c='r', marker='o')
+    ax.set_xlim(-5.0, 5.0)
+    ax.set_ylim(-5.0, 5.0)
+    ax.set_zlim(-5.0, 5.0)
+    ax.scatter(x, y, c=z, cmap='PuRd')
    # plt.title("DMC H2_ion")
     #plt.plot(x, y, z)
     # plt.plot(e_rs)
@@ -100,12 +106,12 @@ def run_dmc(dt, n_times, n_0, x_min, x_max, n_boxes, sample_from_iteration, e, r
 
 if __name__ == "__main__":
     # execute only if run as a script
-    n_0 = 500
-    x_min = 0.0
+    n_0 = 1000
+    x_min = -5.0
     x_max = 5.0
-    n_boxes = 200
+    n_boxes = 600
     dt = 0.1
-    n_times = 2000
+    n_times = 200
     sample_from_iteration = 100
     e = 1.0
     r = 2.0
